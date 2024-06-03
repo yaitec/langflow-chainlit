@@ -1,6 +1,7 @@
 import chainlit as cl
 import httpx
 import os
+import json
 from typing import Optional
 
 LF_BASE_API_URL = os.environ.get("LF_BASE_API_URL")
@@ -19,7 +20,7 @@ async def run_flow(message: str,
     :param tweaks: Optional tweaks to customize the flow
     :return: The JSON response from the flow
     """
-    api_url = f"{LF_BASE_API_URL}/{flow_id}"
+    api_url = f"{LF_BASE_API_URL}/api/v1/run/{flow_id}?stream=true"
 
     payload = {
         "input_value": message,
@@ -49,12 +50,25 @@ async def run_flow(message: str,
 @cl.on_chat_start
 async def on_chat_start():
     # If we use header auth this could be read from the user metadata
-    FLOW_ID = "dcf7de2b-9d40-4cc4-ae65-f40ee907dc88"
+    FLOW_ID = "1278620d-cebb-4f3e-9ec8-a4224fa97245"
     cl.user_session.set("flow_id", FLOW_ID)
     cl.user_session.set("tweaks", {})
 
 @cl.on_message
 async def on_message(msg: cl.Message):
+    msg = await cl.Message(content="").send()
+    
     response = await run_flow(message=msg.content, flow_id=cl.user_session.get("flow_id"), tweaks=cl.user_session.get("tweaks"))
-    response_text = response.get("outputs")[0].get("outputs")[0].get("results").get("result")
-    await cl.Message(content=response_text).send()
+    
+    stream_url = response.get("outputs")[0].get("outputs")[0].get("artifacts").get("stream_url")
+    
+    async with httpx.AsyncClient() as client:
+        stream = await client.get(f"{LF_BASE_API_URL}{stream_url}")
+        async for line in stream.aiter_lines():
+            if line.startswith("data: "):
+                data = line[len("data: "):]
+                parsed = json.loads(data)
+                if token := parsed.get("chunk"):
+                    await msg.stream_token(token)
+        
+    await msg.update()
