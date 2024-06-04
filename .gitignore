@@ -1,3 +1,5 @@
 .env
 .files
 __pycache__
+*.aider.*
+*env*

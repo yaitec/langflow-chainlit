@@ -6,6 +6,7 @@ from typing import Optional
 
 LF_BASE_API_URL = os.environ.get("LF_BASE_API_URL")
 LF_API_KEY = os.environ.get("LF_API_KEY")
+FLOW_ID = os.environ.get("FLOW_ID")
 
 async def run_flow(message: str,
   flow_id: str,
@@ -50,7 +51,6 @@ async def run_flow(message: str,
 @cl.on_chat_start
 async def on_chat_start():
     # If we use header auth this could be read from the user metadata
-    FLOW_ID = "71d8aab9-6ef4-49ad-9b7b-4e48e9951fd1"
     cl.user_session.set("flow_id", FLOW_ID)
     cl.user_session.set("tweaks", {})
 
