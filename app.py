@@ -30,8 +30,8 @@ async def run_flow(message: str,
     headers = None
     if tweaks:
         payload["tweaks"] = tweaks
-    if LF_API_KEY:
-        headers = {"x-api-key": LF_API_KEY}
+    # if LF_API_KEY:
+    #     headers = {"x-api-key": LF_API_KEY}
     async with httpx.AsyncClient() as client:
         response = await client.post(api_url, json=payload, headers=headers)
         response.raise_for_status()
@@ -50,18 +50,20 @@ async def run_flow(message: str,
 @cl.on_chat_start
 async def on_chat_start():
     # If we use header auth this could be read from the user metadata
-    FLOW_ID = "1278620d-cebb-4f3e-9ec8-a4224fa97245"
+    FLOW_ID = "71d8aab9-6ef4-49ad-9b7b-4e48e9951fd1"
     cl.user_session.set("flow_id", FLOW_ID)
     cl.user_session.set("tweaks", {})
 
 @cl.on_message
 async def on_message(msg: cl.Message):
+
+    content = msg.content
     msg = await cl.Message(content="").send()
-    
-    response = await run_flow(message=msg.content, flow_id=cl.user_session.get("flow_id"), tweaks=cl.user_session.get("tweaks"))
-    
+
+    response = await run_flow(message=content, flow_id=cl.user_session.get("flow_id"), tweaks=cl.user_session.get("tweaks"))
+
     stream_url = response.get("outputs")[0].get("outputs")[0].get("artifacts").get("stream_url")
-    
+
     async with httpx.AsyncClient() as client:
         stream = await client.get(f"{LF_BASE_API_URL}{stream_url}")
         async for line in stream.aiter_lines():
@@ -70,5 +72,5 @@ async def on_message(msg: cl.Message):
                 parsed = json.loads(data)
                 if token := parsed.get("chunk"):
                     await msg.stream_token(token)
-        
+
     await msg.update()
