@@ -1,5 +1,7 @@
 .env
 .files
-__pycache__
-*.aider.*
+*__pycache__*
+.aider*
+env/*
 *env*
+*venv*
